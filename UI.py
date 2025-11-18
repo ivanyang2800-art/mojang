@@ -25,5 +25,3 @@ class loginpage:
 root = Tk()
 app=loginpage(root)
 root.mainloop()
-
-print("ivan babi")
