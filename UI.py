@@ -17,6 +17,7 @@ class loginpage:
         self.entry_password.pack()
 
         ttk.Button(self.root, text="Login", command = self.proseslogin).pack()
+        
     def proseslogin(self):
         username = self.entry_username.get()
         password = self.entry_password.get()
