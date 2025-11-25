@@ -1,3 +1,4 @@
+Create database ecommerce
 Create table userdata(
   userid int auto_increment Primary key,
   username varchar(255) unique not null,
