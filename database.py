@@ -1,13 +1,14 @@
-import mysql.connector as konekdb
+import mysql.connector as dbsql
 
 class database():
     def __init__(self):
-        self.mydb=konekdb.connect(
+        self.mydb=dbsql.connect(
             host="localhost",
             user="root",
             password="",
-            database="ecommerce prologue"
+            database="ecommerce"
         )
         self.cursor = self.mydb.cursor()
 
-db_connection = database()
+db= database()
+print(db.mydb)
