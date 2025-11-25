@@ -1,6 +1,51 @@
-CREATE TABLE
-  `user` (
-    `username` varchar(25) DEFAULT NULL,
-    `password` varchar(25) DEFAULT NULL,
-    `userid` varchar(1) DEFAULT NULL
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci
+Create table userdata(
+  userid int auto_increment Primary key,
+  username varchar(255) unique not null,
+  password varchar(255) not null,
+  roleuser enum('customer', 'vendor') default 'customer' not null
+);
+
+create table stores(
+  storeid int auto_increment primary key,
+  userid int not null,
+  storename varchar(255) not null,
+  foreign key (userid) references userdata(userid)
+);
+
+create table products(
+  productid int auto_increment primary key,
+  storeid int not null,
+  productname varchar(255) not null,
+  description text,
+  price decimal (15,2) not null,
+  quantity int not null,
+  foreign key (storeid) references stores(storeid)
+);
+
+create table cart(
+  cartid int auto_increment primary key,
+  userid int not null,
+  checkout datetime default null,
+  foreign key(userid) references userdata(userid)
+);
+
+create table detail(
+  detailid int auto_increment primary key,
+  cartid int not null,
+  quantity int not null,
+  productid int not null,
+  price decimal(15,2) not null,
+  productname varchar(255) not null,
+  foreign key (cartid) references cart(cartid),
+  foreign key (productid) references products(productid)
+);
+
+
+
+
+
+
+
+
+
+
