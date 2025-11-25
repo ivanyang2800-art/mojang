@@ -6,29 +6,29 @@ import auth
 
 auth_obj = auth.Auth()
 
-customtkinter.set_appearance_mode("dark")  # bisa ganti "light" kalau mau terang
+customtkinter.set_appearance_mode("light")  # bisa ganti "light" kalau mau terang
 customtkinter.set_default_color_theme("blue")  # atau "green" / "dark-blue"
 
 class loginpage:
     def __init__(self,root):
         self.root = root
-        self.root.title ("ECOMMERCE PROLOGUE")
-        self.root.geometry ("480x620")
+        self.root.title ("UIB MART")
+        self.root.geometry ("480x580")
         self.root.eval('tk::PlaceWindow . center')
-        self.root.resizable(True, True)
+        self.root.resizable(False, False)
 
         #warna bg
-        self.canvas = Canvas(root, width=480, height=620, highlightthickness=0)
+        self.canvas = Canvas(root, width=480, height=580, highlightthickness=0)
         self.canvas.place(x=0, y=0)
-        self.canvas.create_rectangle(0, 0, 480, 620, fill="#1a1a2e", outline="")
+        self.canvas.create_rectangle(0, 0, 480, 580, fill="#1a1a2e", outline="")
         self.canvas.create_rectangle(0, 0, 480, 300, fill="#16213e", outline="")
 
         #logo
         title = customtkinter.CTkLabel(
             root,
-            text="ECOMMERCE\nPROLOGUE",
-            font=customtkinter.CTkFont(family="Montserrat", size=36, weight="bold"),
-            text_color="#00d4ff",   
+            text="UIB MART",
+            font=customtkinter.CTkFont(family="Poppins", size=36, weight="bold"),
+            text_color="#00d4ff",
             width=480
         )
         title.place(x=0, y=80)
@@ -37,12 +37,12 @@ class loginpage:
         # Frame tengah putih
         frame = customtkinter.CTkFrame(root,
              corner_radius=20,
-             fg_color="#0f3460",
+             fg_color="#ab7aab",
              width=360,
              height=320
         )
         frame.place(relx=0.5, rely=0.5, anchor="center")
-        
+
         # Username
         customtkinter.CTkLabel(
             frame,
