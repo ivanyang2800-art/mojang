@@ -1,6 +1,9 @@
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox as warn
+import auth
+
+auth_obj = auth.Auth()
 
 class loginpage:
     def __init__(self,root):
@@ -17,10 +20,13 @@ class loginpage:
         self.entry_password.pack()
 
         ttk.Button(self.root, text="Login", command = self.proseslogin).pack()
+
     def proseslogin(self):
         username = self.entry_username.get()
         password = self.entry_password.get()
         print(f"username is :{username}, password is:{password}")
+        user_db = auth_obj.proses_login(username,password)
+        print(user_db)
 
 root = Tk()
 app=loginpage(root)
