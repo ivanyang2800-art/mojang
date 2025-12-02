@@ -1,10 +1,20 @@
 import customtkinter as ctk
-from PIL import Image
+from PIL import Image, ImageDraw
 import os
 
 #Theme
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
+
+def buat_placeholder(size=(180, 180)):
+    img = Image.new("RGB", size, "#f0f0f0")
+    draw = ImageDraw.Draw(img)
+    for i in range(-size[0], size[1]*2, 40):
+        draw.line([(i, 0), (i + size[1], size[1])], fill="#e0e0e0", width=20)
+        draw.line([(0, i), (size[0], i + size[0])], fill="#e0e0e0", width=20)
+    draw.text((size[0]//2 - 45, size[1]//2 - 15), "No Image", fill="#aaaaaa", font_size=20)
+    
+    return img
 
 class HomePage(ctk.CTk):
     def __init__(self):
@@ -44,16 +54,11 @@ class HomePage(ctk.CTk):
 
         # Daftar produk (nama, harga, path gambar)
         self.products = [
-            ("nama", "Rp57.500", "img1.png"),
+            ("Sofa", "Rp100.000", "img/img1.png"),
             ("n", "Rp61.513", "img2.png"),
             ("n", "Rp948.999", "img3.png"),
             ("n", "Rp50.500","img4.png"),
             ("n", "Rp69.000","img5.png"),
-            ("n", "Rp30.000", "img6.png"),
-            ("n", "Rp68.899", "img7.png"),
-            ("n", "Rp28.899", "img8.png"),
-            ("n", "Rp1.275.000", "img9.png"),
-            ("n", "Rp357.000", "img10.png"),
         ]
 
         for idx, (nama, harga, img_path) in enumerate(self.products):
@@ -72,7 +77,7 @@ class HomePage(ctk.CTk):
         )
         btn_inbox.place(x=60, y=25)
 
-        # Home (tengah, lebih menonjol)
+        # Home
         btn_home = ctk.CTkButton(
             bottom_nav, text="Home", width=100, height=50,
             fg_color="#00aa5b", text_color="white", corner_radius=25,
@@ -89,12 +94,13 @@ class HomePage(ctk.CTk):
         )
         btn_profile.place(x=340, y=25)
 
-    def create_product_card(self, idx, nama, harga, img_path):
+    def create_product_card(self,parent,idx, nama, harga, img_path):
         row=idx // 5
         col=idx % 5
 
         # kartu produk
         card = ctk.CTkFrame(
+            parent,
             corner_radius=12,
             fg_color="white",
             border_width=1,
@@ -106,11 +112,11 @@ class HomePage(ctk.CTk):
         # Gambar produk
         try:
             img = Image.open(img_path).resize((180, 180), Image.Resampling.LANCZOS)
-            ctk_img = ctk.CTkImage(light_image=img, size=(180, 180))
-            lbl_img = ctk.CTkLabel(card, image=ctk_img, text="")
-            lbl_img.image = ctk_img  # keep reference
         except:
-            lbl_img = ctk.CTkLabel(card, text="No Image", width=180, height=180, fg_color="#f0f0f0")
+            img = buat_placeholder()
+        ctk_img = ctk.CTkImage(light_image=img, size=(180, 180))
+        lbl_img = ctk.CTkLabel(card, image=ctk_img, text="")
+        lbl_img.image = ctk_img
         lbl_img.pack(pady=8)
 
         # Nama produk
