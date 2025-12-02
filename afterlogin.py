@@ -55,10 +55,10 @@ class HomePage(ctk.CTk):
         # Daftar produk (nama, harga, path gambar)
         self.products = [
             ("Sofa", "Rp100.000", "img/img1.png"),
-            ("n", "Rp61.513", "img2.png"),
-            ("n", "Rp948.999", "img3.png"),
-            ("n", "Rp50.500","img4.png"),
-            ("n", "Rp69.000","img5.png"),
+            ("n", "Rp0", "img2.png"),
+            ("n", "Rp0", "img3.png"),
+            ("n", "Rp0","img4.png"),
+            ("n", "Rp0","img5.png"),
         ]
 
         for idx, (nama, harga, img_path) in enumerate(self.products):
@@ -130,11 +130,75 @@ class HomePage(ctk.CTk):
     def show_detail(self, nama, harga):
         detail = ctk.CTkToplevel(self)
         detail.title(nama)
-        detail.geometry("400x600")
-        ctk.CTkLabel(detail, text=nama, font=ctk.CTkFont(size=20, weight="bold")).pack(pady=30)
-        ctk.CTkLabel(detail, text=harga, font=ctk.CTkFont(size=24, weight="bold"), text_color="#00aa5b").pack(pady=10)
-        ctk.CTkButton(detail, text="Beli Sekarang", fg_color="#00aa5b", height=50).pack(pady=50, fill="x", padx=40)
+        detail.geometry("500x700")
+        detail.resizable(False, False)
+        detail.grab_set()
+        try:
+            img_big = Image.open("img/img1.png").resize((450, 450), Image.Resampling.LANCZOS)
+        except:
+            img_big = self.buat_placeholder((200, 200))
+        ctk_img = ctk.CTkImage(light_image=img_big, size=(200, 200))
+        lbl_gambar = ctk.CTkLabel(detail, image=ctk_img, text="")
+        lbl_gambar.image = ctk_img
+        lbl_gambar.pack(pady=(20, 10))
+        # === NAMA PRODUK ===
+        ctk.CTkLabel(
+            detail,
+            text=nama,
+            font=ctk.CTkFont(size=24, weight="bold"),
+            wraplength=460,
+            justify="center"
+        ).pack(pady=(0, 10))
 
+        # === HARGA ===
+        ctk.CTkLabel(
+            detail,
+            text=harga,
+            font=ctk.CTkFont(size=28, weight="bold"),
+            text_color="#00aa5b"
+        ).pack(pady=(0, 20))
+
+        # === QUANTITY (+ / -) ===
+        frame_qty = ctk.CTkFrame(detail, fg_color="transparent")
+        frame_qty.pack(pady=10)
+
+        quantity = ctk.IntVar(value=1)
+
+        def kurang():
+            if quantity.get() > 1:
+                quantity.set(quantity.get() - 1)
+
+        def tambah():
+            quantity.set(quantity.get() + 1)
+
+        ctk.CTkButton(frame_qty, text="  –  ", width=40, font=ctk.CTkFont(size=20),
+                    command=kurang).pack(side="left", padx=10)
+        
+        ctk.CTkLabel(frame_qty, textvariable=quantity, font=ctk.CTkFont(size=22, weight="bold"), width=60).pack(side="left")
+        
+        ctk.CTkButton(frame_qty, text="  +  ", width=40, font=ctk.CTkFont(size=20),
+                    command=tambah).pack(side="left", padx=10)
+
+        # === TOMBOL BELI & KERANJANG ===
+        ctk.CTkButton(
+            detail,
+            text="Masukkan Keranjang",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            fg_color="#ff6b00",
+            hover_color="#e55a00",
+            height=50,
+            command=lambda: print(f"Keranjang: {nama} x{quantity.get()}")  # nanti diganti ke fungsi keranjang beneran
+        ).pack(pady=15, padx=50, fill="x")
+
+        ctk.CTkButton(
+            detail,
+            text="Beli Sekarang",
+            font=ctk.CTkFont(size=20, weight="bold"),
+            fg_color="#00aa5b",
+            hover_color="#00994d",
+            height=55,
+            command=lambda: print(f"Beli langsung: {nama} x{quantity.get()}")
+        ).pack(pady=(5, 30), padx=50, fill="x")
 # Jalankan
 if __name__ == "__main__":
     app = HomePage()
