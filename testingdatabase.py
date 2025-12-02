@@ -1,10 +1,19 @@
-root.geometry ("480x580")
-title = customtkinter.CTkLabel(
-        root,
-        text="UIB MART",
-        font=customtkinter.CTkFont(family="Montserrat", size=36, weight="bold"),
-        text_color="#00d4ff",
-        width=480
-    )
-    title.place(x=0, y=80)
-    title.configure(anchor="center")
+import mysql.connector as dbsql
+
+class Jorky:
+  def __init__(self):
+    self.mydb = dbsql.connect(
+      host="localhost",
+      user="root",
+      password="",
+      database="ecommerce"
+      )
+    mycursor = self.mydb.cursor()  
+    mycursor.execute("SHOW TABLES")
+
+    for tb in mycursor:
+      print(tb)
+db = Jorky()
+print(db.mydb)
+
+
