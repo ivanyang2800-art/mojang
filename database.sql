@@ -2,7 +2,7 @@ Create database ecommerce
 Create table userdata(
   userid int auto_increment Primary key,
   username varchar(255) unique not null,
-  password varchar(255) not null,
+  passuser varchar(255) not null,
   roleuser enum('customer', 'vendor') default 'customer' not null
 );
 
