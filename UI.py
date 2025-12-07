@@ -39,6 +39,8 @@ from tkinter import ttk
 from tkinter import messagebox as warn
 from PIL import ImageTk,Image
 from database import Database
+import auth
+import afterlogin
 
 class loginpage:
     def __init__(self,root):#ini window pertama
@@ -46,7 +48,7 @@ class loginpage:
         self.root = root
         self.db=Database()
 
-        self.root.title ("page login")
+        self.root.title ("UIB MART")
         self.root.geometry ("500x500")
         self.root.iconbitmap(r"c:\Users\Ivan\Downloads\icons\windows_1.ico")
         

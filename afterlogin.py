@@ -141,7 +141,7 @@ class HomePage(ctk.CTk):
         lbl_gambar = ctk.CTkLabel(detail, image=ctk_img, text="")
         lbl_gambar.image = ctk_img
         lbl_gambar.pack(pady=(20, 10))
-        # === NAMA PRODUK ===
+        #NAMA PRODUK
         ctk.CTkLabel(
             detail,
             text=nama,
@@ -149,8 +149,7 @@ class HomePage(ctk.CTk):
             wraplength=460,
             justify="center"
         ).pack(pady=(0, 10))
-
-        # === HARGA ===
+        #HARGA
         ctk.CTkLabel(
             detail,
             text=harga,
@@ -158,7 +157,7 @@ class HomePage(ctk.CTk):
             text_color="#00aa5b"
         ).pack(pady=(0, 20))
 
-        # === QUANTITY (+ / -) ===
+        #QUANTITY (+ / -)
         frame_qty = ctk.CTkFrame(detail, fg_color="transparent")
         frame_qty.pack(pady=10)
 
@@ -179,7 +178,7 @@ class HomePage(ctk.CTk):
         ctk.CTkButton(frame_qty, text="  +  ", width=40, font=ctk.CTkFont(size=20),
                     command=tambah).pack(side="left", padx=10)
 
-        # === TOMBOL BELI & KERANJANG ===
+        #TOMBOL BELI & KERANJANG
         ctk.CTkButton(
             detail,
             text="Masukkan Keranjang",
@@ -187,7 +186,7 @@ class HomePage(ctk.CTk):
             fg_color="#ff6b00",
             hover_color="#e55a00",
             height=50,
-            command=lambda: print(f"Keranjang: {nama} x{quantity.get()}")  # nanti diganti ke fungsi keranjang beneran
+            command=lambda: print(f"Keranjang: {nama} x{quantity.get()}") 
         ).pack(pady=15, padx=50, fill="x")
 
         ctk.CTkButton(
@@ -197,8 +196,59 @@ class HomePage(ctk.CTk):
             fg_color="#00aa5b",
             hover_color="#00994d",
             height=55,
-            command=lambda: print(f"Beli langsung: {nama} x{quantity.get()}")
+            command=self.buka_checkout
         ).pack(pady=(5, 30), padx=50, fill="x")
+    
+    def buka_checkout(self):
+        checkout = ctk.CTkToplevel(self)
+        checkout.title("Checkout")
+        checkout.geometry("400x500")
+        checkout.resizable(False, False)
+        checkout.grab_set()
+
+        # Judul
+        ctk.CTkLabel(checkout, text="Checkout", font=ctk.CTkFont(size=28, weight="bold")).pack(pady=20)
+
+        # Total harga (contoh)
+        total = "Rp1.250.000"
+        ctk.CTkLabel(checkout, text="Total Pembayaran", font=ctk.CTkFont(size=14)).pack(pady=(20,5))
+        ctk.CTkLabel(checkout, text=total, font=ctk.CTkFont(size=30, weight="bold"), text_color="#00aa5b").pack(pady=(0,30))
+
+        # Info pengiriman simpel
+        ctk.CTkLabel(checkout, text="Dikirim ke:", font=ctk.CTkFont(size=14)).pack()
+        ctk.CTkLabel(checkout, text="Jakarta Pusat", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(0,20))
+
+        # Tombol bayar
+        ctk.CTkButton(
+            checkout,
+            text="Bayar Sekarang",
+            font=ctk.CTkFont(size=20, weight="bold"),
+            fg_color="#00aa5b",
+            hover_color="#00994d",
+            height=50,
+            command=lambda: self.bayar_sukses(checkout)
+        ).pack(pady=30, padx=50, fill="x")
+
+        # Tombol batal
+        ctk.CTkButton(
+            checkout,
+            text="Batal",
+            font=ctk.CTkFont(size=16),
+            fg_color="gray",
+            height=40,
+            command=checkout.destroy
+        ).pack(pady=10)
+
+    def bayar_sukses(self, window):
+        window.destroy()
+        sukses = ctk.CTkToplevel(self)
+        sukses.title("Sukses!")
+        sukses.geometry("350x200")
+        sukses.grab_set()
+
+        ctk.CTkLabel(sukses, text="Pembayaran Berhasil!", font=ctk.CTkFont(size=22, weight="bold"), text_color="green").pack(pady=30)
+        ctk.CTkLabel(sukses, text="Terima kasih telah berbelanja", font=ctk.CTkFont(size=14)).pack(pady=10)
+        ctk.CTkButton(sukses, text="OK", width=100, command=sukses.destroy).pack(pady=20)
 # Jalankan
 if __name__ == "__main__":
     app = HomePage()
