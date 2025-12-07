@@ -212,17 +212,17 @@ class App(ctk.CTk):
         password = self.password_entry.get()
         
         if username in ["", "Username"] or password in ["", "Password"]:
-            CTkMessagebox(title="Error", message="Isi username dan password dulu ya!", icon="warning")
+            CTkMessagebox(title="Error", message="Please fill in your username and password correctly!", icon="warning")
             return
         
         if len(username) < 4 or len(password) < 4:
-            CTkMessagebox(title="Error", message="Minimal 4 karakter!", icon="warning")
+            CTkMessagebox(title="Error", message="Username and Password must be at least 4 characters!", icon="warning")
             return
 
         user = self.db.check_user(username, password)
 
         if user:
-            CTkMessagebox(title="Success", message=f"Selamat datang, {user[1]}!", icon="check", fade_in_duration=300)
+            CTkMessagebox(title="Success", message=f"Welcome, {user[1]}!", icon="check", fade_in_duration=300)
             
             # TUTUP LOGIN, BUKA HOME
             self.destroy()                          # tutup jendela login
@@ -230,7 +230,7 @@ class App(ctk.CTk):
             HomePage(home_root, username=user[1])   # buka halaman afterlogin + kirim nama
             home_root.mainloop()
         else:
-            CTkMessagebox(title="Error", message="Username atau password salah!", icon="cancel")
+            CTkMessagebox(title="Error", message="Invalid username/password", icon="cancel")
 
     # SIGNUP LOGIC
     def signup_user(self):
