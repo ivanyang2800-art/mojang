@@ -23,14 +23,13 @@ class HomePage(ctk.CTk):
         self.username = username
 
         self.title("UIB MART - Home")
-        self.geometry("1000x640")
+        self.geometry("1200x800")
 
-        # Contoh sambutan
-        ctk.CTkLabel(self, text=f"Halo, {self.username}!", 
-                     font=ctk.CTkFont(size=30, weight="bold")).pack(pady=50)
+        ctk.CTkLabel(self, text=f"Selamat datang, {self.username}!", 
+                     font=ctk.CTkFont(size=30)).pack(pady=100)
         # self.iconbitmap("logo.ico")
 
-        # === HEADER (Judul + lokasi) ===
+        #HEADER (Judul + lokasi)
         header = ctk.CTkFrame(self, height=90, corner_radius=0, fg_color="#ffffff")
         header.pack(fill="x")
         header.pack_propagate(False)

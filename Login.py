@@ -222,13 +222,13 @@ class App(ctk.CTk):
         user = self.db.check_user(username, password)
 
         if user:
-            CTkMessagebox(title="Success", message=f"Welcome, {user[1]}!", icon="check", fade_in_duration=300)
+            CTkMessagebox(title="Success", message=f"Welcome {user[1]}!", icon="check",fade_in_duration=300)
             
-            # TUTUP LOGIN, BUKA HOME
-            self.destroy()                          # tutup jendela login
-            home_root = ctk.CTk()                   # bikin jendela baru
-            HomePage(home_root, username=user[1])   # buka halaman afterlogin + kirim nama
-            home_root.mainloop()
+            # INI YANG PENTING BANGET:
+            self.destroy()                              # tutup login
+            home_root = ctk.CTk()                       # jendela baru
+            HomePage(home_root, username=user[1])       # kasih jendela + nama
+            home_root.mainloop()                        # jalanin home
         else:
             CTkMessagebox(title="Error", message="Invalid username/password", icon="cancel")
 
@@ -247,12 +247,9 @@ class App(ctk.CTk):
             CTkMessagebox(title="Error", message="Please enter a longer password (min 6 characters)", icon="warning")
             return   
 
-
-        
         self.db.create_user(username, password)
         CTkMessagebox(title="Success", message="Account created successfully!", icon="check")
         self.show_login_page()
-
 
 # Run app
 if __name__ == "__main__":
