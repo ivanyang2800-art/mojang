@@ -1,25 +1,21 @@
 import mysql.connector
 
-class Database():
-    def __init__(self):    
-        self.mydb= mysql.connector.connect(
-            host="127.0.0.1",
+class Database:
+    def __init__(self):
+        self.db = mysql.connector.connect(
+            host="localhost",
             user="root",
             password="",
-            database="ecommerce_simple"
+            database="ecommerce"
         )
+        self.cursor = self.db.cursor()
 
-        self.cursor=self.mydb.cursor()
+    def create_user(self, username, password):
+        sql = "INSERT INTO userdata (username, passuser) VALUES (%s, %s)"
+        self.cursor.execute(sql, (username, password))
+        self.db.commit()
 
-        
-
-
-    def get_data(self, query, params=None):
-        self.cursor.execute(query, params)
+    def check_user(self, username, password):
+        sql = "SELECT userid, roleuser FROM userdata WHERE username=%s AND passuser=%s"
+        self.cursor.execute(sql, (username, password))
         return self.cursor.fetchone()
-    
-
-    def process_data_query(self, query, params=None):
-        self.cursor.execute(query, params)
-        self.mydb.commit()
-        return True
