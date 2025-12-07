@@ -1,22 +1,25 @@
-import mysql.connector as dbsql
+import mysql.connector
 
-class Database:
-    def __init__(self):
-        self.mydb = dbsql.connect(
-            host="localhost",
+class Database():
+    def __init__(self):    
+        self.mydb= mysql.connector.connect(
+            host="127.0.0.1",
             user="root",
             password="",
-            database="ecommerce"
-            )
-        self.cursor = self.mydb.cursor()
-        def get_data(self, query):
-            self.cursor.execute(query)
-            return self.cursor.fetchall()
+            database="ecommerce_simple"
+        )
 
+        self.cursor=self.mydb.cursor()
 
-        def process_data_query(self, query):
-            self.cursor.execute(query)
-            self.mydb.commit()
-            return True
         
-db_connection = Database()
+
+
+    def get_data(self, query, params=None):
+        self.cursor.execute(query, params)
+        return self.cursor.fetchone()
+    
+
+    def process_data_query(self, query, params=None):
+        self.cursor.execute(query, params)
+        self.mydb.commit()
+        return True
