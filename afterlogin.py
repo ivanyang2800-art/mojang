@@ -213,14 +213,14 @@ class HomePage(ctk.CTk):
         # Judul
         ctk.CTkLabel(checkout, text="Checkout", font=ctk.CTkFont(size=28, weight="bold")).pack(pady=20)
 
-        # Total harga (contoh)
-        total = "Rp1.250.000"
+        # Total harga
+        total = "Rp1.250.000" #CHANGE
         ctk.CTkLabel(checkout, text="Total Pembayaran", font=ctk.CTkFont(size=14)).pack(pady=(20,5))
         ctk.CTkLabel(checkout, text=total, font=ctk.CTkFont(size=30, weight="bold"), text_color="#00aa5b").pack(pady=(0,30))
 
         # Info pengiriman simpel
         ctk.CTkLabel(checkout, text="Dikirim ke:", font=ctk.CTkFont(size=14)).pack()
-        ctk.CTkLabel(checkout, text="Jakarta Pusat", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(0,20))
+        ctk.CTkLabel(checkout, text="Batam", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(0,20))
 
         # Tombol bayar
         ctk.CTkButton(
