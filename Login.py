@@ -57,7 +57,7 @@ class App(ctk.CTk):
         top.pack(fill="x", pady=10, padx=20)
 
         try:
-            icon = ctk.CTkImage( light_image=Image.open("img/Logo-UIB.jpg"),
+            icon = ctk.CTkImage( light_image=Image.open("C:/Users/Lenovo/OneDrive/Documents/GitHub/mojang/img/Logo-UIB.jpg"),
                                 size=(50, 50))
        
         except:
@@ -138,7 +138,7 @@ class App(ctk.CTk):
         top.pack(fill="x", pady=10, padx=20)
 
         try:
-            icon = ctk.CTkImage( light_image=Image.open(("img/Logo-UIB.jpg")),
+            icon = ctk.CTkImage( light_image=Image.open("C:/Users/Lenovo/OneDrive/Documents/GitHub/mojang/img/Logo-UIB.jpg"),
                                 size=(50, 50))
        
         except:
