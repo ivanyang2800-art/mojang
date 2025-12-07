@@ -3,6 +3,7 @@ from tkinter import PhotoImage
 from database import Database
 from CTkMessagebox import CTkMessagebox
 from PIL import Image
+from afterlogin import HomePage
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
@@ -24,9 +25,7 @@ class App(ctk.CTk):
 
         self.show_login_page()
 
-    # -------------------------------------------------------------------
     # Placeholder function
-    # -------------------------------------------------------------------
     def set_placeholder(self, widget, text, is_password=False):
         widget.insert(0, text)
         widget.configure(text_color="gray")
@@ -47,15 +46,13 @@ class App(ctk.CTk):
         widget.bind("<FocusIn>", on_focus_in)
         widget.bind("<FocusOut>", on_focus_out)
 
-    # -------------------------------------------------------------------
     # LOGIN PAGE
-    # -------------------------------------------------------------------
     def show_login_page(self):
         for widget in self.container.winfo_children():
             widget.destroy()
     
         self.title("UIB MART - LOGIN")
-        # --- TOP BAR ---
+        # TOP BAR
         top = ctk.CTkFrame(self.container, fg_color="white")
         top.pack(fill="x", pady=10, padx=20)
 
@@ -75,7 +72,7 @@ class App(ctk.CTk):
         title.pack(side="left", padx=10)
 
 
-        # --- MAIN LOGIN CONTAINER ---
+        # MAIN LOGIN CONTAINER
         frame = ctk.CTkFrame(self.container, corner_radius=25, fg_color="#f0f0f5")
         frame.place(relx=0.5, rely=0.5, anchor="center")
 
@@ -130,9 +127,7 @@ class App(ctk.CTk):
             )
         exit_btn.pack(pady=7)
 
-    # -------------------------------------------------------------------
     # SIGN UP PAGE
-    # -------------------------------------------------------------------
     def show_signup_page(self):
         
         for widget in self.container.winfo_children():
@@ -211,31 +206,33 @@ class App(ctk.CTk):
             )
         exit_btn.pack(pady=7)
 
-    # -------------------------------------------------------------------
     # LOGIN LOGIC
-    # -------------------------------------------------------------------
     def login_user(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
         
-        if username == "" or username == "Username" or password=="" or password=="Password":
-            CTkMessagebox(title="Error", message="Please fill in your username and password correctly!", icon="warning")
+        if username in ["", "Username"] or password in ["", "Password"]:
+            CTkMessagebox(title="Error", message="Isi username dan password dulu ya!", icon="warning")
             return
         
         if len(username) < 4 or len(password) < 4:
-            CTkMessagebox(title="Error", message="Username and Password must be at least 4 characters!", icon="warning")
+            CTkMessagebox(title="Error", message="Minimal 4 karakter!", icon="warning")
             return
+
         user = self.db.check_user(username, password)
 
         if user:
-            username_value = user[1]
-            CTkMessagebox(title="Success", message=f"Welcome {username_value}!", icon="check")
+            CTkMessagebox(title="Success", message=f"Selamat datang, {user[1]}!", icon="check", fade_in_duration=300)
+            
+            # TUTUP LOGIN, BUKA HOME
+            self.destroy()                          # tutup jendela login
+            home_root = ctk.CTk()                   # bikin jendela baru
+            HomePage(home_root, username=user[1])   # buka halaman afterlogin + kirim nama
+            home_root.mainloop()
         else:
-            CTkMessagebox(title="Error", message="Invalid username/password", icon="cancel")
+            CTkMessagebox(title="Error", message="Username atau password salah!", icon="cancel")
 
-    # -------------------------------------------------------------------
     # SIGNUP LOGIC
-    # -------------------------------------------------------------------
     def signup_user(self):
         username = self.new_username.get()
         password = self.new_password.get()

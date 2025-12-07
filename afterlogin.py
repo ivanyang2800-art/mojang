@@ -17,12 +17,17 @@ def buat_placeholder(size=(180, 180)):
     return img
 
 class HomePage(ctk.CTk):
-    def __init__(self):
+    def __init__(self, master, username="User"):
         super().__init__()
-        self.title("UIB MART")
+        self.master = master
+        self.username = username
+
+        self.title("UIB MART - Home")
         self.geometry("1000x640")
-        self.resizable(False, False)
-        self.state("zoomed")
+
+        # Contoh sambutan
+        ctk.CTkLabel(self, text=f"Halo, {self.username}!", 
+                     font=ctk.CTkFont(size=30, weight="bold")).pack(pady=50)
         # self.iconbitmap("logo.ico")
 
         # === HEADER (Judul + lokasi) ===
