@@ -1,14 +1,21 @@
-import mysql.connector as dbsql
+import mysql.connector
 
-class database():
+class Database:
     def __init__(self):
-        self.mydb=dbsql.connect(
+        self.db = mysql.connector.connect(
             host="localhost",
             user="root",
             password="",
             database="ecommerce"
         )
-        self.cursor = self.mydb.cursor()
+        self.cursor = self.db.cursor()
 
-db= database()
-print(db.mydb)
+    def create_user(self, username, password):
+        sql = "INSERT INTO userdata (username, passuser) VALUES (%s, %s)"
+        self.cursor.execute(sql, (username, password))
+        self.db.commit()
+
+    def check_user(self, username, password):
+        sql = "SELECT userid, roleuser FROM userdata WHERE username=%s AND passuser=%s"
+        self.cursor.execute(sql, (username, password))
+        return self.cursor.fetchone()
