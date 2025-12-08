@@ -1,9 +1,9 @@
 import customtkinter as ctk
 from tkinter import PhotoImage
-from database import Database
 from CTkMessagebox import CTkMessagebox
 from PIL import Image
 from afterlogin import HomePage
+from database import Database
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
