@@ -49,7 +49,7 @@ class HomePage(ctk.CTk):
             text_color="#666666"
         ).place(x=20, y=60)
 
-        # === SCROLLABLE PRODUCT GRID ===
+        # SCROLLABLE PRODUCT GRID
         container = ctk.CTkScrollableFrame(self, fg_color="#f9f9f9")
         container.pack(fill="both", expand=True, padx=20, pady=20)
 
@@ -69,7 +69,7 @@ class HomePage(ctk.CTk):
         for idx, (nama, harga, img_path) in enumerate(self.products):
             self.create_product_card(container, idx, nama, harga, img_path)
 
-        # === BOTTOM NAVIGATION (Inbox - Home - Akun) ===
+        # BOTTOM NAVIGATION (Inbox - Home - Akun)
         bottom_nav = ctk.CTkFrame(self, height=80, fg_color="white", corner_radius=0)
         bottom_nav.pack(fill="x", side="bottom")
         bottom_nav.pack_propagate(False)
