@@ -28,7 +28,7 @@ class HomePage(ctk.CTk):
 
         ctk.CTkLabel(self, text=f"Selamat datang, {self.username}!", 
                      font=ctk.CTkFont(size=30)).pack(pady=100)
-        # self.iconbitmap("logo.ico")
+        self.iconbitmap("img/Logo-UIB.ico")
 
         #HEADER (Judul + lokasi)
         header = ctk.CTkFrame(self, height=90, corner_radius=0, fg_color="#ffffff")
