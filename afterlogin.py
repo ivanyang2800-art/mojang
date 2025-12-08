@@ -1,6 +1,8 @@
 import customtkinter as ctk
 from PIL import Image, ImageDraw
 import os
+from CTkMessagebox import CTkMessagebox
+from database import Database
 
 #Theme
 ctk.set_appearance_mode("light")
@@ -17,9 +19,8 @@ def buat_placeholder(size=(180, 180)):
     return img
 
 class HomePage(ctk.CTk):
-    def __init__(self, master, username="User"):
+    def __init__(self, username="User"):
         super().__init__()
-        self.master = master
         self.username = username
 
         self.title("UIB MART - Home")

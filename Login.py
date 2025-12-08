@@ -222,13 +222,11 @@ class App(ctk.CTk):
         user = self.db.check_user(username, password)
 
         if user:
-            CTkMessagebox(title="Success", message=f"Welcome {user[1]}!", icon="check",fade_in_duration=300)
+            CTkMessagebox(title="Success", message=f"Welcome {username}!", icon="check",fade_in_duration=300)
             
             # INI YANG PENTING BANGET:
             self.destroy()                              # tutup login
-            home_root = ctk.CTk()                       # jendela baru
-            HomePage(home_root, username=user[1])       # kasih jendela + nama
-            home_root.mainloop()                        # jalanin home
+            HomePage(username=username).mainloop()                        # jalanin home
         else:
             CTkMessagebox(title="Error", message="Invalid username/password", icon="cancel")
 
