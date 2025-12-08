@@ -27,9 +27,9 @@ class HomePage(ctk.CTk):
     def __init__(self, username="User"):
         super().__init__()
         self.username = username
-        self.db = Database()
-        self._popup_open = False  # untuk mencegah double popup
 
+        # database helper
+        self.db = Database()
         # try to get userid & role
         try:
             self.db.cursor.execute("SELECT userid, roleuser FROM userdata WHERE username=%s", (self.username,))
@@ -71,27 +71,20 @@ class HomePage(ctk.CTk):
         ).place(x=20, y=60)
 
         # === SCROLLABLE PRODUCT GRID ===
-        # kita simpan container sebagai attribute agar dapat di-refresh
         self.container = ctk.CTkScrollableFrame(self, fg_color="#f9f9f9")
         self.container.pack(fill="both", expand=True, padx=20, pady=20)
 
-        # buat grid frame di dalam container agar kita bisa lock ukuran
-        self.grid_frame = ctk.CTkFrame(self.container, fg_color="transparent")
-        self.grid_frame.pack(fill="both", expand=True)
-        # stop propagation supaya ukuran tidak berubah otomatis (membantu mencegah loncat)
-        self.grid_frame.pack_propagate(False)
-
-        # columns konfigurasi (kita pakai grid pada grid_frame)
+        # columns
         for i in range(5):
-            self.grid_frame.grid_columnconfigure(i, weight=1)
+            self.container.grid_columnconfigure(i, weight=1)
 
-        # load products from DB
+        # load products from DB, fallback to sample
         self.products = self.load_products()
 
-        # render initial products
-        self.tampilkan_produk()
+        for idx, prod in enumerate(self.products):
+            self.create_product_card(self.container, idx, prod)
 
-        # === BOTTOM NAVIGATION (Cart - Keluar - Akun) ===
+        # === BOTTOM NAVIGATION (Cart - Home - Akun) ===
         bottom_nav = ctk.CTkFrame(self, height=80, fg_color="white", corner_radius=0)
         bottom_nav.pack(fill="x", side="bottom")
         bottom_nav.pack_propagate(False)
@@ -104,14 +97,14 @@ class HomePage(ctk.CTk):
         )
         btn_cart.place(x=60, y=25)
 
-        # Home center button (keluar)
-        btn_home = ctk.CTkButton(
+        # keluar center button
+        btn_keluar = ctk.CTkButton(
             bottom_nav, text="Keluar", width=100, height=50,
             fg_color="#003773", text_color="white", corner_radius=25,
             font=ctk.CTkFont(size=14, weight="bold"),
-            command=lambda: self.destroy()
+            command=self._open_login_after_destroy
         )
-        btn_home.place(relx=0.5, rely=0.5, anchor="center")
+        btn_keluar.place(relx=0.5, rely=0.5, anchor="center")
 
         # Akun (ikon orang) with menu
         btn_profile = ctk.CTkButton(
@@ -119,28 +112,14 @@ class HomePage(ctk.CTk):
             font=ctk.CTkFont(size=12, weight="bold"), text_color="#003773",
             hover_color="#f0f0f0", command=self.open_account_menu
         )
-        btn_profile.place(x=350, y=25)
-
-    # --------------------------- HELPERS ---------------------------
-    def show_msg(self, title="Info", message="", icon="info"):
-        """
-        Wrapper untuk mencegah popup double. Menggunakan CTkMessagebox untuk familiaritas,
-        tapi memastikan hanya satu popup terbuka pada satu waktu.
-        """
-        if self._popup_open:
-            return
-        try:
-            self._popup_open = True
-            CTkMessagebox(title=title, message=message, icon=icon)
-        finally:
-            self._popup_open = False
+        btn_profile.place(x=340, y=25)
 
     # --------------------------- DATABASE HELPERS ---------------------------
     def load_products(self):
         products = []
         try:
-            # select productid, productname, price, quantity, description
-            self.db.cursor.execute("SELECT productid, productname, price, quantity, description FROM products")
+            # no description column used anymore
+            self.db.cursor.execute("SELECT productid, productname, price, quantity FROM products")
             rows = self.db.cursor.fetchall()
             for r in rows:
                 products.append({
@@ -148,15 +127,14 @@ class HomePage(ctk.CTk):
                     "name": r[1],
                     "price": float(r[2]) if r[2] is not None else 0,
                     "stock": int(r[3]) if r[3] is not None else 0,
-                    "desc": r[4] or ""
                 })
         except Exception as e:
             print("Failed to load products from DB, using fallback sample. Error:", e)
-            # fallback sample
+            # fallback sample with updated quantities
             products = [
-                {"productid": 1, "name": "Sofa", "price": 100000, "stock": 2, "desc": "Sofa nyaman"},
-                {"productid": 2, "name": "Lampu", "price": 25000, "stock": 0, "desc": "Lampu LED"},
-                {"productid": 3, "name": "Meja", "price": 75000, "stock": 5, "desc": "Meja kayu"},
+                {"productid": 1, "name": "Sofa", "price": 100000, "stock": 100},
+                {"productid": 2, "name": "Lampu", "price": 25000, "stock": 100},
+                {"productid": 3, "name": "Meja", "price": 75000, "stock": 100},
             ]
         return products
 
@@ -170,43 +148,31 @@ class HomePage(ctk.CTk):
                 return row[0]
             # create
             now = None
-            # coba insert dengan kolom total jika ada; masih simpel -> biarkan DB handle default NULL jika kolom ada
             self.db.cursor.execute("INSERT INTO cart (userid, checkout) VALUES (%s, %s)", (self.userid, now))
             self.db.db.commit()
-            # lastrowid mungkin tidak tersedia di semua DB adapters; gunakan cursor.lastrowid jika ada
-            try:
-                return self.db.cursor.lastrowid
-            except Exception:
-                # fallback: query kembali cart terbaru untuk userid
-                self.db.cursor.execute("SELECT cartid FROM cart WHERE userid=%s AND checkout IS NULL ORDER BY cartid DESC LIMIT 1", (self.userid,))
-                rr = self.db.cursor.fetchone()
-                return rr[0] if rr else None
+            return self.db.cursor.lastrowid
         except Exception as e:
             print("get_or_create_cart error:", e)
             return None
 
-    # --------------------------- UI: PRODUCT DISPLAY ---------------------------
-    def tampilkan_produk(self):
+    # --------------------------- REFRESH HELPERS ---------------------------
+    def refresh_products(self):
         """
-        Render produk ke dalam grid_frame. Panggil hanya dari dalam class
-        atau melalui refresh_produk().
+        Centralized refresh for the main product grid.
+        Call this whenever product data may have changed (checkout, add product, update product, delete product).
         """
-        for idx, prod in enumerate(self.products):
-            self.create_product_card(self.grid_frame, idx, prod)
+        try:
+            self.products = self.load_products()
+            # clear product widgets
+            for widget in self.container.winfo_children():
+                widget.destroy()
+            # recreate cards
+            for idx, prod in enumerate(self.products):
+                self.create_product_card(self.container, idx, prod)
+        except Exception as e:
+            print("refresh_products error:", e)
 
-    def refresh_produk(self):
-        """
-        Hapus semua card lalu reload produk dari DB dan render ulang.
-        Panggil setelah add/update/delete product.
-        """
-        # hapus semua widget di grid_frame
-        for w in self.grid_frame.winfo_children():
-            w.destroy()
-        # reload product list dari DB
-        self.products = self.load_products()
-        # render ulang
-        self.tampilkan_produk()
-
+    # --------------------------- UI: PRODUCT CARDS ---------------------------
     def create_product_card(self, parent, idx, prod):
         row = idx // 5
         col = idx % 5
@@ -217,12 +183,9 @@ class HomePage(ctk.CTk):
             fg_color="white",
             border_width=1,
             border_color="#eeeeee",
-            width=220,
-            height=320
+            width=220
         )
         card.grid(row=row, column=col, padx=10, pady=12, sticky="nsew")
-        # stop card auto resizing (help reduce jumpiness)
-        card.grid_propagate(False)
         card.bind("<Button-1>", lambda e, p=prod: self.show_detail(p))
 
         # Gambar (placeholder)
@@ -236,7 +199,7 @@ class HomePage(ctk.CTk):
         ctk.CTkLabel(card, text=prod["name"], font=ctk.CTkFont(size=13, weight="bold"),
                      text_color="#222222", wraplength=170, justify="center").pack(pady=5)
 
-        # Stock
+        # Stock di bawah nama dan di atas harga
         stock_text = f"Stock: {prod['stock']}" if prod.get('stock') is not None else "Stock: -"
         ctk.CTkLabel(card, text=stock_text, font=ctk.CTkFont(size=12), text_color="#666666").pack(pady=(0, 5))
 
@@ -311,7 +274,10 @@ class HomePage(ctk.CTk):
 
         def update_add_button_state():
             q = quantity.get()
-            if stock <= 0 or q > stock:
+            if stock <= 0:
+                add_btn.configure(state="disabled")
+                add_btn.set_title("Habis") if hasattr(add_btn, 'set_title') else None
+            elif q > stock:
                 add_btn.configure(state="disabled")
             else:
                 add_btn.configure(state="normal")
@@ -320,201 +286,186 @@ class HomePage(ctk.CTk):
 
     def add_to_cart(self, productid, qty, parent_window=None):
         if not self.userid:
-            self.show_msg(title="Error", message="Anda harus login untuk menambahkan ke keranjang", icon="warning")
-            return
-
-        try:
-            # ensure product exists and has enough stock
-            self.db.cursor.execute("SELECT quantity, price, productname FROM products WHERE productid=%s", (productid,))
-            row = self.db.cursor.fetchone()
-            if not row:
-                self.show_msg(title="Error", message="Produk tidak ditemukan", icon="warning")
-                return
-            stock = int(row[0])
-            price_per_unit = float(row[1]) if row[1] is not None else 0
-            pname = row[2] if row[2] is not None else ""
-
-            if qty <= 0:
-                self.show_msg(title="Error", message="Jumlah harus lebih dari 0", icon="warning")
-                return
-
-            cartid = self.get_or_create_cart()
-            if not cartid:
-                self.show_msg(title="Error", message="Tidak dapat membuat atau menemukan keranjang", icon="warning")
-                return
-
-            # check existing quantity in cart for this product
-            self.db.cursor.execute("SELECT detailid, quantity FROM detail WHERE cartid=%s AND productid=%s", (cartid, productid))
-            r = self.db.cursor.fetchone()
-            existing = int(r[1]) if r else 0
-
-            if qty + existing > stock:
-                self.show_msg(title="Error", message="Jumlah melebihi stock yang tersedia", icon="warning")
-                return
-
-            if r:
-                # update detail (update quantity)
-                newq = existing + qty
-                self.db.cursor.execute("UPDATE detail SET quantity=%s WHERE detailid=%s", (newq, r[0]))
-            else:
-                # insert detail with price per unit and productname
-                self.db.cursor.execute(
-                    "INSERT INTO detail (cartid, quantity, productid, price, productname) VALUES (%s, %s, %s, %s, %s)",
-                    (cartid, qty, productid, price_per_unit, pname)
-                )
-
-            self.db.db.commit()
-            self.show_msg(title="Sukses", message="Produk berhasil dimasukkan ke keranjang", icon="check")
-            # jangan destroy parent_window di sini, kita hanya close detail window jika ada
-            if parent_window:
-                parent_window.destroy()
-        except Exception as e:
-            print("add_to_cart error:", e)
-            self.show_msg(title="Error", message="Terjadi kesalahan saat menambahkan ke keranjang", icon="cancel")
-
-    # --------------------------- CART UI ---------------------------
-    def open_cart(self):
-        if not self.userid:
-            self.show_msg(title="Error", message="Anda harus login untuk melihat keranjang", icon="warning")
+            CTkMessagebox(title="Error", message="Anda harus login untuk menambahkan ke keranjang", icon="warning")
             return
 
         cartid = self.get_or_create_cart()
         if not cartid:
-            self.show_msg(title="Error", message="Tidak ada keranjang aktif", icon="warning")
+            CTkMessagebox(title="Error", message="Gagal membuat atau mengambil keranjang. Coba lagi nanti.", icon="error")
             return
 
-        # Buat window cart kalau belum ada, atau fokuskan jika sudah ada
-        # Simpler: buat baru tiap kali user click Cart (window tetap stabil saat update qty)
+        try:
+            # ensure product exists and has enough stock, and get unit price
+            self.db.cursor.execute("SELECT price, quantity, productname FROM products WHERE productid=%s", (productid,))
+            row = self.db.cursor.fetchone()
+            if not row:
+                CTkMessagebox(title="Error", message="Produk tidak ditemukan", icon="warning")
+                return
+            unit_price = float(row[0]) if row[0] is not None else 0
+            stock = int(row[1]) if row[1] is not None else 0
+            pname = row[2] if row[2] is not None else ""
+
+            # check existing quantity in cart for this product
+            self.db.cursor.execute("SELECT detailid, quantity, price FROM detail WHERE cartid=%s AND productid=%s", (cartid, productid))
+            r = self.db.cursor.fetchone()
+            existing = int(r[1]) if r else 0
+
+            if qty <= 0:
+                CTkMessagebox(title="Error", message="Jumlah harus lebih besar dari 0", icon="warning")
+                return
+
+            if qty + existing > stock:
+                CTkMessagebox(title="Error", message="Jumlah melebihi stock yang tersedia", icon="warning")
+                return
+
+            if r:
+                # update detail: new quantity and new total price
+                detailid = r[0]
+                newq = existing + qty
+                new_total = unit_price * newq
+                self.db.cursor.execute("UPDATE detail SET quantity=%s, price=%s WHERE detailid=%s", (newq, new_total, detailid))
+            else:
+                # insert detail with total price (unit_price * qty)
+                total_price = unit_price * qty
+                self.db.cursor.execute(
+                    "INSERT INTO detail (cartid, quantity, productid, price, productname) VALUES (%s, %s, %s, %s, %s)",
+                    (cartid, qty, productid, total_price, pname)
+                )
+
+            self.db.db.commit()
+            CTkMessagebox(title="Sukses", message=f"{pname} berhasil dimasukkan ke keranjang (x{qty})", icon="check")
+
+            if parent_window:
+                try:
+                    parent_window.destroy()
+                except Exception:
+                    pass
+        except Exception as e:
+            print("add_to_cart error:", e)
+            CTkMessagebox(title="Error", message="Terjadi kesalahan saat menambahkan ke keranjang", icon="cancel")
+
+    # --------------------------- CART UI ---------------------------
+    def open_cart(self):
+        if not self.userid:
+            CTkMessagebox(title="Error", message="Anda harus login untuk melihat keranjang", icon="warning")
+            return
+
+        cartid = self.get_or_create_cart()
+        if not cartid:
+            CTkMessagebox(title="Error", message="Gagal mengambil keranjang. Coba lagi nanti.", icon="error")
+            return
+
         cart_win = ctk.CTkToplevel(self)
         cart_win.title("Keranjang Saya")
         cart_win.geometry("600x600")
         cart_win.grab_set()
 
-        # frame konten (kita akan refresh isinya, bukan destroy window)
-        content_frame = ctk.CTkFrame(cart_win, fg_color="#ffffff")
-        content_frame.pack(fill="both", expand=True, padx=10, pady=10)
-        content_frame.pack_propagate(False)
+        frame = ctk.CTkScrollableFrame(cart_win, fg_color="#ffffff")
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # scrollable area for items
-        items_frame = ctk.CTkScrollableFrame(content_frame, fg_color="#ffffff", height=420)
-        items_frame.pack(fill="both", expand=False, padx=4, pady=4)
+        # load cart details
+        try:
+            self.db.cursor.execute("SELECT detailid, productid, quantity, price, productname FROM detail WHERE cartid=%s", (cartid,))
+            rows = self.db.cursor.fetchall()
+        except Exception as e:
+            print("open_cart fetch error:", e)
+            CTkMessagebox(title="Error", message="Gagal memuat keranjang", icon="error")
+            cart_win.destroy()
+            return
 
-        # tempat total & tombol
-        bottom_frame = ctk.CTkFrame(content_frame, fg_color="#ffffff")
-        bottom_frame.pack(fill="x", side="bottom", padx=4, pady=6)
+        total = 0.0
+        for r in rows:
+            detailid, productid, quantity, price, productname = r
+            item_frame = ctk.CTkFrame(frame, fg_color="#f8f8f8", corner_radius=8)
+            item_frame.pack(fill="x", pady=6, padx=6)
 
-        # buat fungsi untuk render isi keranjang (dipanggil ulang tiap update)
-        def render_cart_contents():
-            # hapus isi items_frame
-            for w in items_frame.winfo_children():
-                w.destroy()
+            ctk.CTkLabel(item_frame, text=productname, font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=10, pady=(6,0))
 
-            # ambil data detail
+            # price in DB is total price (unit * quantity). compute unit safely
             try:
-                self.db.cursor.execute("SELECT detailid, productid, quantity, price, productname FROM detail WHERE cartid=%s", (cartid,))
-                rows = self.db.cursor.fetchall()
-            except Exception as e:
-                print("load cart detail error:", e)
-                rows = []
+                unit_price = float(price) / int(quantity) if int(quantity) > 0 else float(price)
+            except Exception:
+                unit_price = float(price)
+            ctk.CTkLabel(item_frame, text=f"Rp{int(unit_price):,}  x {quantity}  =  Rp{int(price):,}", font=ctk.CTkFont(size=12)).pack(anchor="w", padx=10)
 
-            total = 0
-            for r in rows:
-                detailid, productid, quantity, price, productname = r
-                item_frame = ctk.CTkFrame(items_frame, fg_color="#f8f8f8", corner_radius=8)
-                item_frame.pack(fill="x", pady=6, padx=6)
-
-                ctk.CTkLabel(item_frame, text=productname, font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=10, pady=(6,0))
-                ctk.CTkLabel(item_frame, text=f"Rp{int(price):,}  x {quantity}", font=ctk.CTkFont(size=12)).pack(anchor="w", padx=10)
-
-                def make_change_func(did, pid):
-                    def change(qdelta):
-                        try:
-                            # ambil current
-                            self.db.cursor.execute("SELECT quantity FROM detail WHERE detailid=%s", (did,))
-                            cur = self.db.cursor.fetchone()
-                            if not cur:
+            def make_change_func(did, pid):
+                def change(qdelta):
+                    try:
+                        # update quantity for detail
+                        self.db.cursor.execute("SELECT quantity FROM detail WHERE detailid=%s", (did,))
+                        cur = self.db.cursor.fetchone()
+                        if not cur:
+                            return
+                        newq = int(cur[0]) + qdelta
+                        if newq <= 0:
+                            # remove item
+                            self.db.cursor.execute("DELETE FROM detail WHERE detailid=%s", (did,))
+                        else:
+                            # ensure not exceed stock
+                            self.db.cursor.execute("SELECT price, quantity FROM products WHERE productid=%s", (pid,))
+                            pcur = self.db.cursor.fetchone()
+                            if not pcur:
+                                CTkMessagebox(title="Error", message="Produk tidak ditemukan", icon="warning")
                                 return
-                            newq = int(cur[0]) + qdelta
-                            if newq <= 0:
-                                # remove item
-                                self.db.cursor.execute("DELETE FROM detail WHERE detailid=%s", (did,))
-                            else:
-                                # ensure not exceed stock
-                                self.db.cursor.execute("SELECT quantity FROM products WHERE productid=%s", (pid,))
-                                pcur = self.db.cursor.fetchone()
-                                stock = int(pcur[0]) if pcur else 0
-                                if newq > stock:
-                                    self.show_msg(title="Error", message="Jumlah melebihi stock yang tersedia", icon="warning")
-                                    return
-                                self.db.cursor.execute("UPDATE detail SET quantity=%s WHERE detailid=%s", (newq, did))
-                            self.db.db.commit()
-                        except Exception as e:
-                            print("change cart qty error:", e)
-                            self.show_msg(title="Error", message="Gagal mengubah jumlah", icon="cancel")
-                        # render ulang isi cart tapi jangan destroy window — menjaga posisi ukuran window
-                        render_cart_contents()
-                    return change
+                            unit = float(pcur[0]) if pcur[0] is not None else 0
+                            stock = int(pcur[1]) if pcur[1] is not None else 0
+                            if newq > stock:
+                                CTkMessagebox(title="Error", message="Jumlah melebihi stock yang tersedia", icon="warning")
+                                return
+                            new_total = unit * newq
+                            self.db.cursor.execute("UPDATE detail SET quantity=%s, price=%s WHERE detailid=%s", (newq, new_total, did))
+                        self.db.db.commit()
+                        cart_win.destroy()
+                        self.open_cart()  # refresh cart window
+                    except Exception as e:
+                        print("change cart item error:", e)
+                        CTkMessagebox(title="Error", message="Gagal memperbarui item keranjang", icon="error")
+                return change
 
-                btn_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
-                btn_frame.pack(anchor="e", pady=6, padx=10)
-                ctk.CTkButton(btn_frame, text="–", width=40, command=lambda f=make_change_func(detailid, productid): f(-1)).pack(side="left", padx=6)
-                ctk.CTkButton(btn_frame, text="+", width=40, command=lambda f=make_change_func(detailid, productid): f(1)).pack(side="left", padx=6)
+            btn_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
+            btn_frame.pack(anchor="e", pady=6, padx=10)
+            ctk.CTkButton(btn_frame, text="–", width=40, command=lambda f=make_change_func(detailid, productid): f(-1)).pack(side="left", padx=6)
+            ctk.CTkButton(btn_frame, text="+", width=40, command=lambda f=make_change_func(detailid, productid): f(1)).pack(side="left", padx=6)
 
-                total += int(price) * int(quantity)
+            total += float(price)  # price is already total per line
 
-            # update total label (hapus lalu buat ulang agar mudah)
-            for w in bottom_frame.winfo_children():
-                w.destroy()
+        ctk.CTkLabel(cart_win, text=f"Total: Rp{int(total):,}", font=ctk.CTkFont(size=18, weight="bold"), text_color="#00aa5b").pack(pady=10)
 
-            ctk.CTkLabel(bottom_frame, text=f"Total: Rp{total:,}", font=ctk.CTkFont(size=18, weight="bold"), text_color="#00aa5b").pack(pady=10)
-            ctk.CTkButton(bottom_frame, text="Checkout", font=ctk.CTkFont(size=16, weight="bold"), fg_color="#003773", hover_color="#1d4ed8", command=lambda: self.checkout(cartid, cart_win)).pack(pady=8, padx=40, fill="x")
-            ctk.CTkButton(bottom_frame, text="Tutup", font=ctk.CTkFont(size=14), fg_color="#6b7280", command=cart_win.destroy).pack(pady=6, padx=40, fill="x")
-
-        # initial render
-        render_cart_contents()
+        ctk.CTkButton(cart_win, text="Checkout", font=ctk.CTkFont(size=16, weight="bold"), fg_color="#003773", hover_color="#1d4ed8", command=lambda: self.checkout(cartid, cart_win)).pack(pady=8, padx=40, fill="x")
+        ctk.CTkButton(cart_win, text="Tutup", font=ctk.CTkFont(size=14), fg_color="#6b7280", command=cart_win.destroy).pack(pady=6, padx=40, fill="x")
 
     def checkout(self, cartid, window):
         try:
             # validate stock for all items
             self.db.cursor.execute("SELECT productid, quantity FROM detail WHERE cartid=%s", (cartid,))
             items = self.db.cursor.fetchall()
+            if not items:
+                CTkMessagebox(title="Info", message="Keranjang kosong", icon="info")
+                return
             for item in items:
                 pid, q = item
                 self.db.cursor.execute("SELECT quantity FROM products WHERE productid=%s", (pid,))
                 r = self.db.cursor.fetchone()
                 stock = int(r[0]) if r else 0
                 if q > stock:
-                    self.show_msg(title="Error", message=f"Produk (id {pid}) tidak cukup stock", icon="warning")
+                    CTkMessagebox(title="Error", message=f"Produk (id {pid}) tidak cukup stock", icon="warning")
                     return
-
             # deduct stock
             for item in items:
                 pid, q = item
                 self.db.cursor.execute("UPDATE products SET quantity = quantity - %s WHERE productid=%s", (q, pid))
-
-            # compute total from detail (quantity * price)
-            self.db.cursor.execute("SELECT SUM(quantity * price) FROM detail WHERE cartid=%s", (cartid,))
-            total_row = self.db.cursor.fetchone()
-            total_amount = float(total_row[0]) if total_row and total_row[0] is not None else 0.0
-
             # set checkout time
             now = datetime.now()
-            # try update cart with total (if kolom total tidak ada, ignore)
-            try:
-                self.db.cursor.execute("UPDATE cart SET checkout=%s, total=%s WHERE cartid=%s", (now, total_amount, cartid))
-            except Exception:
-                # fallback: hanya update checkout jika kolom total tidak ada
-                self.db.cursor.execute("UPDATE cart SET checkout=%s WHERE cartid=%s", (now, cartid))
-
+            self.db.cursor.execute("UPDATE cart SET checkout=%s WHERE cartid=%s", (now, cartid))
             self.db.db.commit()
 
-            self.show_msg(title="Sukses", message="Pembayaran Berhasil!", icon="check")
+            CTkMessagebox(title="Sukses", message="Pembayaran Berhasil! Terima kasih.", icon="check")
             window.destroy()
-            # refresh product list di UI agar stock terbaru tampil
-            self.refresh_produk()
+            # refresh product list centrally
+            self.refresh_products()
         except Exception as e:
             print("checkout error:", e)
-            self.show_msg(title="Error", message="Terjadi kesalahan saat checkout", icon="cancel")
+            CTkMessagebox(title="Error", message="Terjadi kesalahan saat checkout", icon="cancel")
 
     # --------------------------- ACCOUNT / VENDOR MANAGEMENT ---------------------------
     def open_account_menu(self):
@@ -524,35 +475,65 @@ class HomePage(ctk.CTk):
         menu.grab_set()
 
         ctk.CTkLabel(menu, text=f"{self.username}", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=10)
-        ctk.CTkLabel(menu, text=f"Role: {self.role}", font=ctk.CTkFont(size=12)).pack(pady=6)
+        role_label = ctk.CTkLabel(menu, text=f"Role: {self.role}", font=ctk.CTkFont(size=12))
+        role_label.pack(pady=6)
 
         if self.role == 'customer' or self.role is None:
-            ctk.CTkButton(menu, text="Bergabung menjadi Vendor", fg_color="#003773", hover_color="#1d4ed8", command=lambda: self.become_vendor(menu)).pack(pady=8, padx=30, fill="x")
+            ctk.CTkButton(menu, text="Bergabung menjadi Vendor", fg_color="#003773", hover_color="#1d4ed8", command=lambda: self.become_vendor(menu, role_label)).pack(pady=8, padx=30, fill="x")
         else:
             ctk.CTkButton(menu, text="Kelola Toko", fg_color="#003773", hover_color="#1d4ed8", command=lambda: self.manage_store(menu)).pack(pady=8, padx=30, fill="x")
 
-        ctk.CTkButton(menu, text="Logout", fg_color="#ba2f2f", command=lambda: self.logout(menu)).pack(pady=8, padx=30, fill="x")
+        ctk.CTkButton(menu, text="Keluar", fg_color="#ba2f2f", command=self._open_login_after_destroy).pack(pady=8, padx=30, fill="x")
 
-    def become_vendor(self, parent_menu=None):
+
+    def _open_login_after_destroy(self):
+        try:
+            self.destroy()
+            # try to import Login module and open its App() if available
+            import Login
+            if hasattr(Login, 'App'):
+                Login.App().mainloop()
+        except Exception as e:
+            print("_open_login_after_destroy error:", e)
+
+    def become_vendor(self, parent_menu=None, role_label=None):
+        # ask for store name, create store, update role
         def create_store_action():
             name = entry.get().strip()
             if not name:
-                self.show_msg(title="Error", message="Masukkan nama toko", icon="warning")
+                CTkMessagebox(title="Error", message="Masukkan nama toko", icon="warning")
                 return
             try:
+                # check if user already vendor
+                if self.role == 'vendor':
+                    CTkMessagebox(title="Info", message="Anda sudah menjadi vendor", icon="info")
+                    if parent_menu:
+                        parent_menu.destroy()
+                    return
                 # insert store
                 self.db.cursor.execute("INSERT INTO stores (userid, storename) VALUES (%s, %s)", (self.userid, name))
                 # update role
                 self.db.cursor.execute("UPDATE userdata SET roleuser='vendor' WHERE userid=%s", (self.userid,))
                 self.db.db.commit()
                 self.role = 'vendor'
-                self.show_msg(title="Sukses", message="Anda sekarang vendor!", icon="check")
-                popup.destroy()
+                CTkMessagebox(title="Sukses", message="Anda sekarang vendor!", icon="check")
+
                 if parent_menu:
-                    parent_menu.destroy()
+                    try:
+                        parent_menu.destroy()
+                    except Exception:
+                        pass
+                # update role label in menu if provided
+                if role_label:
+                    try:
+                        role_label.configure(text=f"Role: {self.role}")
+                    except Exception:
+                        pass
+                # Refresh product list (in case vendor-created products appear later)
+                self.refresh_products()
             except Exception as e:
                 print("become_vendor error:", e)
-                self.show_msg(title="Error", message="Gagal membuat toko", icon="cancel")
+                CTkMessagebox(title="Error", message="Gagal membuat toko. Pastikan koneksi database dan coba lagi.", icon="cancel")
 
         popup = ctk.CTkToplevel(self)
         popup.title("Buat Toko")
@@ -574,7 +555,7 @@ class HomePage(ctk.CTk):
             stores = []
 
         if not stores:
-            self.show_msg(title="Info", message="Anda belum memiliki toko", icon="info")
+            CTkMessagebox(title="Info", message="Anda belum memiliki toko", icon="info")
             return
 
         storeid = stores[0][0]
@@ -590,16 +571,16 @@ class HomePage(ctk.CTk):
         list_frame = ctk.CTkScrollableFrame(manage_win, fg_color="#ffffff")
         list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # load products for this store
+        # load products for this store (no description)
         try:
-            self.db.cursor.execute("SELECT productid, productname, description, price, quantity FROM products WHERE storeid=%s", (storeid,))
+            self.db.cursor.execute("SELECT productid, productname, price, quantity FROM products WHERE storeid=%s", (storeid,))
             prods = self.db.cursor.fetchall()
         except Exception as e:
             print("manage_store load products error:", e)
             prods = []
 
         for p in prods:
-            pid, pname, pdesc, price, qty = p
+            pid, pname, price, qty = p
             item_frame = ctk.CTkFrame(list_frame, fg_color="#f8f8f8", corner_radius=8)
             item_frame.pack(fill="x", pady=8, padx=8)
 
@@ -619,21 +600,32 @@ class HomePage(ctk.CTk):
                 def update():
                     try:
                         newname = name_e.get().strip()
-                        newqty = int(qty_e.get())
-                        newprice = float(price_e.get())
+                        if not newname:
+                            CTkMessagebox(title="Error", message="Nama produk tidak boleh kosong", icon="warning")
+                            return
+                        try:
+                            newqty = int(qty_e.get())
+                        except ValueError:
+                            CTkMessagebox(title="Error", message="Jumlah stok harus berupa angka bulat", icon="warning")
+                            return
+                        try:
+                            newprice = float(price_e.get())
+                        except ValueError:
+                            CTkMessagebox(title="Error", message="Harga harus berupa angka", icon="warning")
+                            return
                         self.db.cursor.execute("UPDATE products SET productname=%s, quantity=%s, price=%s WHERE productid=%s", (newname, newqty, newprice, pid))
                         self.db.db.commit()
-                        self.show_msg(title="Sukses", message="Produk diperbarui", icon="check")
-                        # refresh main product list
-                        self.refresh_produk()
+                        CTkMessagebox(title="Sukses", message="Produk diperbarui", icon="check")
+                        # refresh main product list so changes appear immediately
+                        self.refresh_products()
                     except Exception as e:
                         print("update product error:", e)
-                        self.show_msg(title="Error", message="Gagal memperbarui produk", icon="cancel")
+                        CTkMessagebox(title="Error", message="Gagal memperbarui produk. Periksa koneksi dan coba lagi.", icon="cancel")
                 return update
 
             ctk.CTkButton(item_frame, text="Simpan", command=make_update_func(pid, name_entry, qty_entry, price_entry)).pack(side="right", padx=6)
 
-        # Add new product section
+        # Add new product section (no description)
         add_frame = ctk.CTkFrame(manage_win, fg_color="#f3f3f3", corner_radius=8)
         add_frame.pack(fill="x", padx=10, pady=6)
 
@@ -642,9 +634,6 @@ class HomePage(ctk.CTk):
         # Nama Produk
         self.entry_nama_produk = ctk.CTkEntry(add_frame, width=300, placeholder_text="Masukkan nama produk")
         self.entry_nama_produk.pack(padx=8, pady=4, anchor="w")
-        # Deskripsi Produk
-        self.entry_deskripsi_produk = ctk.CTkEntry(add_frame, width=500, placeholder_text="Masukkan deskripsi produk")
-        self.entry_deskripsi_produk.pack(padx=8, pady=4, anchor="w")
         # Harga Produk
         self.entry_harga_produk = ctk.CTkEntry(add_frame, width=200, placeholder_text="Harga")
         self.entry_harga_produk.pack(padx=8, pady=4, anchor="w")
@@ -655,30 +644,47 @@ class HomePage(ctk.CTk):
         def add_product_action():
             try:
                 pname = self.entry_nama_produk.get().strip()
-                pdesc = self.entry_deskripsi_produk.get().strip()
-                price = float(self.entry_harga_produk.get())
-                qty = int(self.entry_stok_produk.get())
                 if not pname:
-                    self.show_msg(title="Error", message="Masukkan nama produk", icon="warning")
+                    CTkMessagebox(title="Error", message="Nama produk wajib diisi", icon="warning")
                     return
-                self.db.cursor.execute("INSERT INTO products (storeid, productname, description, price, quantity) VALUES (%s, %s, %s, %s, %s)", (storeid, pname, pdesc, price, qty))
+                try:
+                    price = float(self.entry_harga_produk.get())
+                except Exception:
+                    CTkMessagebox(title="Error", message="Harga tidak valid", icon="warning")
+                    return
+                try:
+                    qty = int(self.entry_stok_produk.get())
+                except Exception:
+                    CTkMessagebox(title="Error", message="Jumlah stok tidak valid", icon="warning")
+                    return
+
+                # ensure store exists
+                try:
+                    self.db.cursor.execute("SELECT storeid FROM stores WHERE userid=%s", (self.userid,))
+                    s = self.db.cursor.fetchone()
+                    if not s:
+                        CTkMessagebox(title="Error", message="Anda belum memiliki toko. Silakan daftar menjadi vendor terlebih dahulu.", icon="warning")
+                        return
+                    storeid_local = s[0]
+                except Exception as e:
+                    print("add_product store check error:", e)
+                    CTkMessagebox(title="Error", message="Gagal memeriksa toko Anda", icon="error")
+                    return
+
+                # Insert without description column
+                self.db.cursor.execute("INSERT INTO products (storeid, productname, price, quantity) VALUES (%s, %s, %s, %s)", (storeid_local, pname, price, qty))
                 self.db.db.commit()
-                self.show_msg(title="Sukses", message="Produk ditambahkan", icon="check")
+                CTkMessagebox(title="Sukses", message="Produk ditambahkan", icon="check")
+                # refresh main product list immediately
+                self.refresh_products()
                 manage_win.destroy()
-                # refresh main product list agar item baru muncul otomatis
-                self.refresh_produk()
-                # reopen manage_store if you want to keep managing (optional)
-                # self.manage_store(parent_menu)
+                # reopen manage_store to refresh its list (pass parent_menu so original caller can be closed if needed)
+                self.manage_store(parent_menu)
             except Exception as e:
                 print("add product error:", e)
-                self.show_msg(title="Error", message="Gagal menambahkan produk", icon="cancel")
+                CTkMessagebox(title="Error", message="Gagal menambahkan produk. Periksa koneksi dan coba lagi.", icon="cancel")
 
         ctk.CTkButton(add_frame, text="Tambah Produk", command=add_product_action, fg_color="#003773").pack(pady=8)
-
-    def logout(self, menu_window=None):
-        if menu_window:
-            menu_window.destroy()
-        self.destroy()
 
     # buka_checkout tersedia untuk "Beli Sekarang" dari detail, akan membuka cart checkout langsung
     def buka_checkout(self):
