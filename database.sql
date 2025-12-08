@@ -17,9 +17,9 @@ create table products(
   productid int auto_increment primary key,
   storeid int not null,
   productname varchar(255) not null,
-  description text,
   price decimal (15,2) not null,
   quantity int not null,
+  image_path VARCHAR(255);
   foreign key (storeid) references stores(storeid)
 );
 
