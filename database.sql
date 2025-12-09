@@ -42,6 +42,30 @@ create table detail(
 );
 
 
+INSERT INTO userdata (username, passuser, roleuser)
+VALUES ('vendor1', 'password123', 'vendor');
+
+-- Tambah user vendor
+INSERT INTO stores (storeid, userid, storename)
+VALUES ('1', '3', 'TOKO ADMIN');
+
+-- Buat toko untuk vendor tersebut
+INSERT INTO products (productid, storeid, productname, price, quantity)
+VALUES
+(1, 1, 'Meja', 1500000, 10),
+(2, 1, 'Sofa', 3500000, 5),
+(3, 1, 'Kursi', 250000, 20);
+
+
+
+
+
+
+
+
+
+
+
 
 
 
