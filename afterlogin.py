@@ -10,32 +10,65 @@ from datetime import datetime
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
+print("Tes path gambar:")
+print(os.path.abspath("img/img1.png"))
+print(os.path.exists("img/img1.png"))
+
+
 def load_image_for_product(product_name, size=(180, 180)):
-    """Load image based on product name: img1.png, img2.png, img3.png.
-       If file missing → use placeholder."""
-    # Tentukan folder gambar
-    folder = "images"   # Ubah sesuai folder kamu
+    """Load image berdasarkan nama produk: img1.png, img2.png, img3.png.
+       Jika file tidak ditemukan → gunakan placeholder."""
+    
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    IMG_DIR = os.path.join(BASE_DIR, "img")
+
+    # mapping nama ke file
     name_map = {
-        "Sofa": "C:/Users/Lenovo/OneDrive/Documents/GitHub/mojang/img/img1.png",
-        "Meja": "C:/Users/Lenovo/OneDrive/Documents/GitHub/mojang/img/img2.jpg",
-        "Kursi": "C:/Users/Lenovo/OneDrive/Documents/GitHub/mojang/img/img3.jpg"
+        "sofa": "img1.png",
+        "meja": "img2.jpg",
+        "kursi": "img3.jpg",
     }
 
-    filename = name_map.get(product_name.capitalize(), None)
-    if not filename:
+    if not product_name:
         return buat_placeholder(size)
 
-    path = os.path.join(folder, filename)
+    key = product_name.strip().lower()
+    filename = name_map.get(key)
 
-    if os.path.exists(path):
-        try:
-            img = Image.open(path)
-            img = img.resize(size)
-            return img
-        except:
-            return buat_placeholder(size)
+    candidates = []
+
+    # Jika ada file dari mapping
+    if filename:
+        candidates.append(os.path.join(IMG_DIR, filename))
     else:
-        return buat_placeholder(size)
+        # coba tebak nama file berdasarkan nama produk
+        candidates += [
+            os.path.join(IMG_DIR, f"{key}.png"),
+            os.path.join(IMG_DIR, f"{key}.jpg"),
+            os.path.join(IMG_DIR, f"{key}.jpeg"),
+        ]
+
+    # Coba buka semua kandidat file
+    for path in candidates:
+        if os.path.exists(path):
+            try:
+                img = Image.open(path)
+                img = img.convert("RGBA")
+
+                # resize
+                try:
+                    resample = Image.Resampling.LANCZOS
+                except:
+                    resample = Image.ANTIALIAS
+
+                img = img.resize(size, resample)
+                return img
+            except Exception as e:
+                print(f"Warning: gagal load gambar {path}: {e}")
+
+    # Jika gagal → placeholder
+    return buat_placeholder(size)
+
 
 def buat_placeholder(size=(180, 180)):
     """Simple patterned placeholder image."""
@@ -49,7 +82,6 @@ def buat_placeholder(size=(180, 180)):
     # center text
     tx = "No Image"
     try:
-        # use a default font if available for nicer centering
         font = ImageFont.load_default()
         tw, th = draw.textsize(tx, font=font)
     except Exception:
@@ -57,7 +89,6 @@ def buat_placeholder(size=(180, 180)):
         font = None
     draw.text(((w - tw) // 2, (h - th) // 2), tx, fill="#aaaaaa", font=font)
     return img
-
 
 class HomePage(ctk.CTk):
     def __init__(self, username="User"):
